@@ -1,0 +1,67 @@
+/* Calendar Styles */
+.calendar {
+  width: 100%;
+}
+
+.calendar-header {
+  margin-bottom: 10px;
+}
+
+.calendar-cell {
+  width: 14.28%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 2px;
+}
+
+.calendar-cell:hover {
+  background-color: #f0f0f0;
+}
+
+.calendar-cell.empty {
+  cursor: default;
+}
+
+.calendar-cell.today {
+  background-color: #e6f7ff;
+  font-weight: bold;
+}
+
+.calendar-cell.selected {
+  background-color: #007bff;
+  color: white;
+}
+
+.calendar-cell.has-events {
+  font-weight: bold;
+}
+
+.event-dot {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ff4d4f;
+}
+
+/* Notification Styles */
+.notification-item {
+  transition: background-color 0.3s;
+}
+
+.notification-item:hover {
+  background-color: #f8f9fa;
+}
+
+/* Table Styles */
+.table-success {
+  opacity: 0.8;
+}
