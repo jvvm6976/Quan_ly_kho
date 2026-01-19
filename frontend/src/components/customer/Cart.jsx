@@ -34,6 +34,29 @@ const Cart = () => {
   // Calculate totals
   const { subtotal, shipping, total } = getCartTotals();
 
+  const getLineTotals = (item) => {
+    const price = Number(item.price) || 0;
+    const qty = Number(item.quantity) || 0;
+    const taxRate = Number(item.tax) || 0;
+    const base = price * qty;
+    const taxAmount = base * (taxRate / 100);
+
+    return {
+      taxAmount,
+      lineTotal: base + taxAmount,
+      base,
+    };
+  };
+
+  const preTaxSubtotal = cartItems.reduce(
+    (sum, item) => sum + getLineTotals(item).base,
+    0
+  );
+  const taxTotal = cartItems.reduce(
+    (sum, item) => sum + getLineTotals(item).taxAmount,
+    0
+  );
+
   // Handle quantity change
   const handleQuantityChange = (id, value) => {
     const item = cartItems.find((item) => item.id === id);
@@ -96,6 +119,8 @@ const Cart = () => {
                           <th>Sản phẩm</th>
                           <th className="text-center">Giá</th>
                           <th className="text-center">Số lượng</th>
+                          <th className="text-center">Thuế</th>
+                          <th className="text-center">Tiền thuế</th>
                           <th className="text-center">Tổng</th>
                           <th></th>
                         </tr>
@@ -163,10 +188,16 @@ const Cart = () => {
                                 >
                                   +
                                 </Button>
-                              </div>
-                            </td>
+                          </div>
+                        </td>
+                        <td className="text-center">
+                          {`${Number(item.tax || 0).toFixed(2)}%`}
+                        </td>
+                        <td className="text-center">
+                          {formatCurrency(getLineTotals(item).taxAmount)}
+                        </td>
                             <td className="text-center fw-bold">
-                              {formatCurrency(item.price * item.quantity)}
+                              {formatCurrency(getLineTotals(item).lineTotal)}
                             </td>
                             <td className="text-center">
                               <Button
@@ -204,7 +235,15 @@ const Cart = () => {
                 </Card.Header>
                 <Card.Body>
                   <div className="d-flex justify-content-between mb-2">
-                    <span>Tạm tính:</span>
+                    <span>Tiền hàng (chưa thuế):</span>
+                    <span>{formatCurrency(preTaxSubtotal)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span>Thuế :</span>
+                    <span>{formatCurrency(taxTotal)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span>Tổng tiền:</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
                   <div className="d-flex justify-content-between mb-2">

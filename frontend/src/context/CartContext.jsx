@@ -93,10 +93,22 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // Calculate cart totals
+  // Calculate cart totals (price + tax per line)
   const getCartTotals = () => {
+    let taxTotal = 0;
     const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-    const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+
+    const subtotal = cartItems.reduce((total, item) => {
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 0;
+      const taxRate = Number(item.tax) || 0;
+      const base = price * quantity;
+      const taxAmount = base * (taxRate / 100);
+
+      taxTotal += taxAmount;
+      return total + base + taxAmount;
+    }, 0);
+
     const shipping = subtotal > 500000 ? 0 : 30000; // Free shipping for orders over 500.000đ
     const total = subtotal + shipping;
     
@@ -104,6 +116,7 @@ export const CartProvider = ({ children }) => {
       itemCount,
       subtotal,
       shipping,
+      taxTotal,
       total
     };
   };

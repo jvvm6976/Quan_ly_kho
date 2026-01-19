@@ -79,7 +79,7 @@ export const productAPI = {
         Object.keys(formData).forEach(key => {
           if (formData[key] !== undefined && formData[key] !== null) {
             // Ensure numeric values are properly converted
-            if (['price', 'costPrice', 'quantity', 'minQuantity', 'categoryId'].includes(key)) {
+            if (['price', 'tax', 'costPrice', 'quantity', 'minQuantity', 'categoryId'].includes(key)) {
               const numValue = Number(formData[key]);
               newFormData.append(key, isNaN(numValue) ? 0 : numValue);
             } else {
@@ -118,7 +118,7 @@ export const productAPI = {
         Object.keys(formData).forEach(key => {
           if (formData[key] !== undefined && formData[key] !== null) {
             // Ensure numeric values are properly converted
-            if (['price', 'costPrice', 'quantity', 'minQuantity', 'categoryId'].includes(key)) {
+            if (['price', 'tax', 'costPrice', 'quantity', 'minQuantity', 'categoryId'].includes(key)) {
               const numValue = Number(formData[key]);
               newFormData.append(key, isNaN(numValue) ? 0 : numValue);
             } else {

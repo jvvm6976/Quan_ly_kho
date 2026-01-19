@@ -79,6 +79,9 @@ const AdminProducts = () => {
     price: Yup.number()
       .required("Giá bán là bắt buộc")
       .positive("Giá bán phải là số dương"),
+    tax: Yup.number()
+      .min(0, "Thuế không được âm")
+      .required("Thuế là bắt buộc"),
     costPrice: Yup.number()
       .required("Giá nhập là bắt buộc")
       .positive("Giá nhập phải là số dương"),
@@ -128,7 +131,7 @@ const AdminProducts = () => {
         // Đảm bảo giá trị không phải là undefined
         if (values[key] !== undefined) {
           // Convert numeric fields to numbers
-          if (["price", "costPrice", "quantity", "minQuantity", "categoryId"].includes(key)) {
+          if (["price", "tax", "costPrice", "quantity", "minQuantity", "categoryId"].includes(key)) {
             // Convert to number and ensure it's a valid number
             const numValue = Number(values[key]);
             formData.append(key, isNaN(numValue) ? 0 : numValue);
@@ -317,6 +320,7 @@ const AdminProducts = () => {
                         <th>Danh mục</th>
                         <th>Giá bán</th>
                         <th>Số lượng</th>
+                        <th>Thuế (%)</th>
                         <th>Trạng thái</th>
                         <th>Thao tác</th>
                       </tr>
@@ -347,6 +351,7 @@ const AdminProducts = () => {
                           <td>{product.category?.name}</td>
                           <td>{formatCurrency(product.price)}</td>
                           <td>{product.quantity}</td>
+                          <td>{product.tax ?? 0}</td>
                           <td>
                             {product.quantity > product.minQuantity ? (
                               <span className="badge bg-success">Đủ hàng</span>
@@ -436,6 +441,7 @@ const AdminProducts = () => {
                   sku: currentProduct.sku,
                   description: currentProduct.description || "",
                   price: currentProduct.price,
+                  tax: currentProduct.tax ?? 0,
                   costPrice: currentProduct.costPrice,
                   quantity: currentProduct.quantity,
                   minQuantity: currentProduct.minQuantity,
@@ -448,6 +454,7 @@ const AdminProducts = () => {
                   sku: "",
                   description: "",
                   price: "",
+                  tax: 0,
                   costPrice: "",
                   quantity: 0,
                   minQuantity: 10,
@@ -529,7 +536,7 @@ const AdminProducts = () => {
                     </Row>
 
                     <Row>
-                      <Col md={6}>
+                      <Col md={4}>
                         <Form.Group className="mb-3">
                           <Form.Label>Giá bán</Form.Label>
                           <Form.Control
@@ -545,7 +552,7 @@ const AdminProducts = () => {
                           </Form.Control.Feedback>
                         </Form.Group>
                       </Col>
-                      <Col md={6}>
+                      <Col md={4}>
                         <Form.Group className="mb-3">
                           <Form.Label>Giá nhập</Form.Label>
                           <Form.Control
@@ -558,6 +565,24 @@ const AdminProducts = () => {
                           />
                           <Form.Control.Feedback type="invalid">
                             {errors.costPrice}
+                          </Form.Control.Feedback>
+                        </Form.Group>
+                      </Col>
+                      <Col md={4}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Thuế</Form.Label>
+                          <Form.Control
+                            type="number"
+                            name="tax"
+                            value={values.tax}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            isInvalid={touched.tax && errors.tax}
+                            min="0"
+                            step="0.01"
+                          />
+                          <Form.Control.Feedback type="invalid">
+                            {errors.tax}
                           </Form.Control.Feedback>
                         </Form.Group>
                       </Col>

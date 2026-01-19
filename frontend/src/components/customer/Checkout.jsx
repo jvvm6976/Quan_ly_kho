@@ -37,6 +37,19 @@ const Checkout = () => {
   // Calculate totals
   const { subtotal, shipping, total } = getCartTotals();
 
+  const getLineTotals = (item) => {
+    const price = Number(item.price) || 0;
+    const qty = Number(item.quantity) || 0;
+    const taxRate = Number(item.tax) || 0;
+    const base = price * qty;
+    const taxAmount = base * (taxRate / 100);
+
+    return {
+      taxAmount,
+      lineTotal: base + taxAmount,
+    };
+  };
+
   // Validation schema
   const validationSchema = Yup.object({
     fullName: Yup.string().required("Họ tên là bắt buộc"),
@@ -310,7 +323,7 @@ const Checkout = () => {
                             </span>
                           </td>
                           <td className="text-end">
-                            {formatCurrency(item.price * item.quantity)}
+                            {formatCurrency(getLineTotals(item).lineTotal)}
                           </td>
                         </tr>
                       ))}

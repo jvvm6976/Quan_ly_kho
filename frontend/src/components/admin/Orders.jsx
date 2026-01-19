@@ -242,6 +242,21 @@ const AdminOrders = () => {
     }
   };
 
+  const calculateItemTotals = (item) => {
+    const price = Number(item.price) || 0;
+    const qty = Number(item.quantity) || 0;
+    const taxRate = Number(item.product?.tax ?? 0);
+    const base = price * qty;
+    const taxAmount = base * (taxRate / 100);
+    const storedSubtotal = item.subtotal !== undefined ? Number(item.subtotal) : NaN;
+    const lineTotal =
+      !Number.isNaN(storedSubtotal) && storedSubtotal !== 0
+        ? storedSubtotal
+        : base + taxAmount;
+
+    return { taxAmount, lineTotal };
+  };
+
   // Generate pagination items
   const paginationItems = [];
   for (let i = 1; i <= pagination.totalPages; i++) {
@@ -544,6 +559,8 @@ const AdminOrders = () => {
                       <th>Sản phẩm</th>
                       <th>Đơn giá</th>
                       <th>Số lượng</th>
+                      <th>Thuế</th>
+                      <th>Tiền thuế</th>
                       <th>Thành tiền</th>
                     </tr>
                   </thead>
@@ -553,13 +570,15 @@ const AdminOrders = () => {
                         <td>{item.product?.name}</td>
                         <td>{formatCurrency(item.price)}</td>
                         <td>{item.quantity}</td>
-                        <td>{formatCurrency(item.subtotal)}</td>
+                        <td>{`${Number(item.product?.tax ?? 0).toFixed(2)}%`}</td>
+                        <td>{formatCurrency(calculateItemTotals(item).taxAmount)}</td>
+                        <td>{formatCurrency(calculateItemTotals(item).lineTotal)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th colSpan="3" className="text-end">
+                      <th colSpan="5" className="text-end">
                         Tổng cộng:
                       </th>
                       <th>{formatCurrency(selectedOrder.totalAmount)}</th>

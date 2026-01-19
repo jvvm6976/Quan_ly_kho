@@ -96,14 +96,18 @@ exports.createOrder = async (req, res) => {
       }
 
       // Calculate subtotal
-      const subtotal = product.price * item.quantity;
+      const price = parseFloat(product.price);
+      const taxRate = product.tax ? parseFloat(product.tax) : 0;
+      const baseSubtotal = price * item.quantity;
+      const taxAmount = baseSubtotal * (taxRate / 100);
+      const subtotal = baseSubtotal + taxAmount;
       totalAmount += subtotal;
 
       // Add to order items
       orderItems.push({
         productId: product.id,
         quantity: item.quantity,
-        price: product.price,
+        price,
         subtotal
       });
 

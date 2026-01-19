@@ -195,6 +195,21 @@ const CustomerOrders = () => {
     }
   };
 
+  const calculateItemTotals = (item) => {
+    const price = Number(item.price) || 0;
+    const qty = Number(item.quantity) || 0;
+    const taxRate = Number(item.product?.tax ?? 0);
+    const base = price * qty;
+    const taxAmount = base * (taxRate / 100);
+    const storedSubtotal = item.subtotal !== undefined ? Number(item.subtotal) : NaN;
+    const lineTotal =
+      !Number.isNaN(storedSubtotal) && storedSubtotal !== 0
+        ? storedSubtotal
+        : base + taxAmount;
+
+    return { taxAmount, lineTotal };
+  };
+
   return (
     <CustomerLayout>
       <Container className="py-4">
@@ -334,6 +349,7 @@ const CustomerOrders = () => {
                         <tr>
                           <th>Sản phẩm</th>
                           <th className="text-center">Số lượng</th>
+                          <th className="text-center">Thuế (%)</th>
                           <th className="text-end">Giá</th>
                           <th className="text-end">Tổng</th>
                         </tr>
@@ -343,18 +359,21 @@ const CustomerOrders = () => {
                           <tr key={item.id}>
                             <td>{item.product?.name}</td>
                             <td className="text-center">{item.quantity}</td>
+                            <td className="text-center">
+                              {formatCurrency(calculateItemTotals(item).taxAmount)}
+                            </td>
                             <td className="text-end">
                               {formatCurrency(item.price)}
                             </td>
                             <td className="text-end">
-                              {formatCurrency(item.price * item.quantity)}
+                              {formatCurrency(calculateItemTotals(item).lineTotal)}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot className="bg-light">
                         <tr>
-                          <th colSpan="3">Tổng cộng</th>
+                          <th colSpan="4">Tổng cộng</th>
                           <th className="text-end">
                             {formatCurrency(selectedOrder.totalAmount)}
                           </th>

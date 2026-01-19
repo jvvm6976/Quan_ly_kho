@@ -327,6 +327,7 @@ const StaffInventory = () => {
                       <th>Danh mục</th>
                       <th>Giá</th>
                       <th>Số lượng</th>
+                      <th>Thuế (%)</th>
                       <th>Vị trí</th>
                       <th>Trạng thái</th>
                       <th>Thao tác</th>
@@ -345,6 +346,7 @@ const StaffInventory = () => {
                             <FaExclamationTriangle className="text-warning ms-2" />
                           )}
                         </td>
+                        <td>{product.tax ?? 0}</td>
                         <td>{product.location}</td>
                         <td>{renderStockStatus(product)}</td>
                         <td>
@@ -435,6 +437,12 @@ const StaffInventory = () => {
                             </Badge>
                           )}
                         </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <strong>Thuế</strong>
+                        </td>
+                        <td>{selectedProduct.tax ?? 0}</td>
                       </tr>
                       <tr>
                         <td>

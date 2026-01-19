@@ -195,6 +195,7 @@ exports.createProduct = async (req, res) => {
       sku,
       description,
       price,
+      tax,
       costPrice,
       quantity,
       minQuantity,
@@ -204,7 +205,7 @@ exports.createProduct = async (req, res) => {
     } = req.body;
 
     console.log('Extracted values:', {
-      name, sku, price, costPrice, quantity, minQuantity, categoryId
+      name, sku, price, tax, costPrice, quantity, minQuantity, categoryId
     });
 
     // Validate required fields
@@ -239,6 +240,7 @@ exports.createProduct = async (req, res) => {
 
     // Ensure numeric values
     const numPrice = price ? parseFloat(price) : 0;
+    const numTax = tax !== undefined && tax !== '' ? parseFloat(tax) : 0;
     const numCostPrice = costPrice ? parseFloat(costPrice) : 0;
     const numQuantity = quantity !== undefined ? parseInt(quantity, 10) : 0;
     const numMinQuantity = minQuantity !== undefined ? parseInt(minQuantity, 10) : 10;
@@ -246,6 +248,7 @@ exports.createProduct = async (req, res) => {
 
     console.log('Parsed numeric values:', {
       price: numPrice,
+      tax: numTax,
       costPrice: numCostPrice,
       quantity: numQuantity,
       minQuantity: numMinQuantity,
@@ -257,6 +260,7 @@ exports.createProduct = async (req, res) => {
       sku,
       description,
       price: numPrice,
+      tax: Number.isNaN(numTax) ? 0 : numTax,
       costPrice: numCostPrice,
       quantity: numQuantity,
       minQuantity: numMinQuantity,
@@ -307,6 +311,7 @@ exports.updateProduct = async (req, res) => {
       sku,
       description,
       price,
+      tax,
       costPrice,
       quantity,
       minQuantity,
@@ -353,12 +358,15 @@ exports.updateProduct = async (req, res) => {
       imagePath = 'uploads/' + path.basename(req.file.path);
     }
 
+    const parsedTax = tax !== undefined && tax !== '' ? parseFloat(tax) : null;
+
     // Update product
     await product.update({
       name: name !== undefined ? name : product.name,
       sku: sku !== undefined ? sku : product.sku,
       description: description !== undefined ? description : product.description,
       price: price !== undefined ? price : product.price,
+      tax: parsedTax !== null && !Number.isNaN(parsedTax) ? parsedTax : product.tax,
       costPrice: costPrice !== undefined ? costPrice : product.costPrice,
       quantity: quantity !== undefined ? quantity : product.quantity,
       minQuantity: minQuantity !== undefined ? minQuantity : product.minQuantity,
