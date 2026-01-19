@@ -316,22 +316,35 @@ exports.updateTransactionStatus = async (req, res) => {
       return res.status(400).json({ message: 'Transaction already processed' });
     }
 
-    // Update transaction status
+    // Load product with current quantity
+    const product = await Product.findByPk(transaction.productId, { transaction: t });
+
+    if (!product) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Calculate delta based on stored transaction quantities to reapply on current stock
+    const delta = Number(transaction.newQuantity) - Number(transaction.previousQuantity);
+    const currentQuantity = Number(product.quantity);
+    const appliedNewQuantity = currentQuantity + delta;
+
+    if (status === 'approved' && appliedNewQuantity < 0) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Not enough stock to approve this transaction with current inventory' });
+    }
+
+    // Update transaction status (and sync quantities for traceability)
     await transaction.update({
       status,
-      approvedBy: req.user.id
+      approvedBy: req.user.id,
+      previousQuantity: currentQuantity,
+      newQuantity: status === 'approved' ? appliedNewQuantity : transaction.newQuantity
     }, { transaction: t });
 
-    // If approved, update product quantity
+    // If approved, update product quantity using recalculated value
     if (status === 'approved') {
-      const product = await Product.findByPk(transaction.productId, { transaction: t });
-
-      if (!product) {
-        await t.rollback();
-        return res.status(404).json({ message: 'Product not found' });
-      }
-
-      await product.update({ quantity: transaction.newQuantity }, { transaction: t });
+      await product.update({ quantity: appliedNewQuantity }, { transaction: t });
     }
 
     await t.commit();

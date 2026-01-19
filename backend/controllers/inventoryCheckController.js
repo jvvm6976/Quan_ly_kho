@@ -214,6 +214,22 @@ exports.updateInventoryCheckStatus = async (req, res) => {
       return res.status(404).json({ message: 'Inventory check not found' });
     }
 
+    // Additional validation: cannot complete if any items not checked
+    if (status === 'completed') {
+      const uncheckedCount = await InventoryCheckItem.count({
+        where: {
+          checkId,
+          status: { [Op.ne]: 'checked' }
+        },
+        transaction: t
+      });
+
+      if (uncheckedCount > 0) {
+        await t.rollback();
+        return res.status(400).json({ message: 'All items must be checked before completing the inventory check' });
+      }
+    }
+
     // Update status
     const updateData = { status };
     
@@ -264,12 +280,19 @@ exports.updateInventoryCheckItem = async (req, res) => {
       return res.status(400).json({ message: 'Inventory check is not in progress' });
     }
 
+    // Validate quantity
+    const parsedActual = Number(actualQuantity);
+    if (!Number.isFinite(parsedActual) || parsedActual < 0) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Invalid quantity' });
+    }
+
     // Calculate difference
-    const difference = actualQuantity - checkItem.systemQuantity;
+    const difference = parsedActual - checkItem.systemQuantity;
 
     // Update check item
     await checkItem.update({
-      actualQuantity,
+      actualQuantity: parsedActual,
       difference,
       notes,
       status: 'checked',

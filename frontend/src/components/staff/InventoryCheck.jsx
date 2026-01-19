@@ -42,27 +42,17 @@ const StaffInventoryCheck = () => {
         setLoading(true);
         setError("");
 
-        // Get all inventory checks
+        // Get inventory checks (ưu tiên in_progress, sau đó pending)
         const checksRes = await inventoryAPI.getAllInventoryChecks({
           limit: 10,
           page: 1,
-          status: "in_progress",
         });
 
         setInventoryChecks(checksRes.data.inventoryChecks);
 
-        // Check if there's an active inventory check
-        const active = checksRes.data.inventoryChecks.find(
-          (check) => check.status === "active"
-        );
-        if (active) {
-          setActiveCheck(active);
-
-          // Get check items for the active check
-          const itemsRes = await inventoryAPI.getInventoryCheckItems(active.id);
-          setCheckItems(itemsRes.data);
-          setFilteredItems(itemsRes.data);
-        }
+        setActiveCheck(null);
+        setCheckItems([]);
+        setFilteredItems([]);
 
         setLoading(false);
       } catch (err) {
@@ -97,15 +87,33 @@ const StaffInventoryCheck = () => {
     // Search is handled by the useEffect
   };
 
-  // Handle view check details
-  const handleViewCheckDetails = (check) => {
-    setSelectedCheck(check);
-    setShowDetailModal(true);
+  // Handle view check details / chọn đợt
+  const handleViewCheckDetails = async (check) => {
+    try {
+      const detailRes = await inventoryAPI.getInventoryCheckById(check.id);
+      setSelectedCheck(detailRes.data);
+      setShowDetailModal(true);
+
+      // Khi chọn đợt để kiểm kê
+      if (check.status === "in_progress" || check.status === "pending") {
+        setActiveCheck(detailRes.data);
+        const items = detailRes.data.items || [];
+        setCheckItems(items);
+        setFilteredItems(items);
+      }
+    } catch (err) {
+      console.error("Error loading check detail:", err);
+      setError("Không tải được chi tiết đợt kiểm kê.");
+    }
   };
 
   // Handle check item form submission
   const handleCheckItem = async (itemId, actualQuantity, notes) => {
     try {
+      if (!activeCheck) {
+        setError("Không có đợt kiểm kê đang diễn ra.");
+        return;
+      }
       setError("");
 
       // Update check item
@@ -115,14 +123,16 @@ const StaffInventoryCheck = () => {
       });
 
       // Refresh check items
-      const itemsRes = await inventoryAPI.getInventoryCheckItems(
+      const detailRes = await inventoryAPI.getInventoryCheckById(
         activeCheck.id
       );
-      setCheckItems(itemsRes.data);
+      const refreshedItems = detailRes.data.items || [];
+      setActiveCheck(detailRes.data);
+      setCheckItems(refreshedItems);
       setFilteredItems(
         searchTerm.trim() === ""
-          ? itemsRes.data
-          : itemsRes.data.filter(
+          ? refreshedItems
+          : refreshedItems.filter(
               (item) =>
                 item.product.name
                   .toLowerCase()
@@ -152,7 +162,7 @@ const StaffInventoryCheck = () => {
   const CheckItemForm = ({ item }) => {
     const [showForm, setShowForm] = useState(false);
     const [actualQuantity, setActualQuantity] = useState(
-      item.actualQuantity || item.expectedQuantity
+      item.actualQuantity ?? item.systemQuantity
     );
     const [notes, setNotes] = useState(item.notes || "");
     const [loading, setLoading] = useState(false);
@@ -204,9 +214,9 @@ const StaffInventoryCheck = () => {
             variant="outline-primary"
             size="sm"
             onClick={() => setShowForm(true)}
-            disabled={item.status === "completed"}
+            disabled={item.status !== "pending"}
           >
-            {item.status === "completed" ? "Đã kiểm kê" : "Kiểm kê"}
+            {item.status === "pending" ? "Kiểm kê" : "Đã kiểm kê"}
           </Button>
         )}
       </>
@@ -242,20 +252,33 @@ const StaffInventoryCheck = () => {
           </div>
         ) : (
           <>
-            {activeCheck ? (
-              <Card className="shadow-sm mb-4">
-                <Card.Header className="bg-primary text-white">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">Đợt Kiểm Kê Đang Diễn Ra</h5>
-                    <Badge bg="light" text="dark">
-                      Mã: {activeCheck.id}
-                    </Badge>
-                  </div>
-                </Card.Header>
-                <Card.Body>
-                  <Row className="mb-4">
-                    <Col md={6}>
-                      <p>
+        {activeCheck ? (
+          <Card className="shadow-sm mb-4">
+            <Card.Header className="bg-primary text-white">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">Đợt Kiểm Kê Đang Diễn Ra</h5>
+                <Badge bg="light" text="dark">
+                  Mã: {activeCheck.id}
+                </Badge>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <div className="d-flex justify-content-end mb-3">
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={() => {
+                    setActiveCheck(null);
+                    setCheckItems([]);
+                    setFilteredItems([]);
+                  }}
+                >
+                  Quay lại danh sách
+                </Button>
+              </div>
+              <Row className="mb-4">
+                <Col md={6}>
+                  <p>
                         <strong>Ngày tạo:</strong>{" "}
                         {new Date(activeCheck.createdAt).toLocaleDateString(
                           "vi-VN"
@@ -263,7 +286,10 @@ const StaffInventoryCheck = () => {
                       </p>
                       <p>
                         <strong>Người tạo:</strong>{" "}
-                        {activeCheck.createdBy?.name || "Admin"}
+                        {activeCheck.creator?.fullName ||
+                          activeCheck.creator?.username ||
+                          activeCheck.createdBy?.name ||
+                          "Admin"}
                       </p>
                     </Col>
                     <Col md={6}>
@@ -312,27 +338,29 @@ const StaffInventoryCheck = () => {
                       <tbody>
                         {filteredItems.map((item) => (
                           <tr key={item.id}>
-                            <td>{item.product.name}</td>
-                            <td>{item.product.sku}</td>
-                            <td>{item.expectedQuantity}</td>
+                            <td>{item.product?.name || "-"}</td>
+                            <td>{item.product?.sku || "-"}</td>
+                            <td>{item.systemQuantity}</td>
                             <td>
-                              {item.actualQuantity !== null
+                              {item.actualQuantity !== null &&
+                              item.actualQuantity !== undefined
                                 ? item.actualQuantity
                                 : "-"}
                             </td>
                             <td>
-                              {item.actualQuantity !== null ? (
+                              {item.actualQuantity !== null &&
+                              item.actualQuantity !== undefined ? (
                                 <span
                                   className={
-                                    item.actualQuantity > item.expectedQuantity
+                                    item.actualQuantity > item.systemQuantity
                                       ? "text-success"
                                       : item.actualQuantity <
-                                        item.expectedQuantity
+                                        item.systemQuantity
                                       ? "text-danger"
                                       : ""
                                   }
                                 >
-                                  {item.actualQuantity - item.expectedQuantity}
+                                  {item.actualQuantity - item.systemQuantity}
                                 </span>
                               ) : (
                                 "-"
@@ -390,32 +418,37 @@ const StaffInventoryCheck = () => {
                                     "vi-VN"
                                   )}
                                 </td>
-                                <td>{check.createdBy?.name || "Admin"}</td>
                                 <td>
-                                  {check.status === "in_progress" ? (
-                                    <Badge bg="success">Đang diễn ra</Badge>
-                                  ) : check.status === "pending" ? (
-                                    <Badge bg="warning">Chờ xử lý</Badge>
-                                  ) : check.status === "completed" ? (
-                                    <Badge bg="primary">Hoàn thành</Badge>
-                                  ) : (
-                                    <Badge bg="secondary">Đã hủy</Badge>
-                                  )}
+                                  {check.creator?.fullName ||
+                                    check.creator?.username ||
+                                    check.createdBy?.name ||
+                                    "Admin"}
                                 </td>
                                 <td>
-                                  <Button
-                                    variant="outline-info"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleViewCheckDetails(check)
-                                    }
-                                  >
-                                    <FaInfoCircle className="me-1" />
-                                    Chi tiết
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
+                              {check.status === "in_progress" ? (
+                                <Badge bg="success">Đang diễn ra</Badge>
+                              ) : check.status === "pending" ? (
+                                <Badge bg="warning">Chờ xử lý</Badge>
+                              ) : check.status === "completed" ? (
+                                <Badge bg="primary">Hoàn thành</Badge>
+                              ) : (
+                                <Badge bg="secondary">Đã hủy</Badge>
+                              )}
+                            </td>
+                            <td>
+                              <Button
+                                variant="outline-info"
+                                size="sm"
+                                onClick={() =>
+                                  handleViewCheckDetails(check)
+                                }
+                              >
+                                <FaInfoCircle className="me-1" />
+                                Xem/Chọn đợt
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
                           </tbody>
                         </Table>
                       </div>
@@ -457,7 +490,10 @@ const StaffInventoryCheck = () => {
                     </p>
                     <p>
                       <strong>Người tạo:</strong>{" "}
-                      {selectedCheck.createdBy?.name || "Admin"}
+                      {selectedCheck.creator?.fullName ||
+                        selectedCheck.creator?.username ||
+                        selectedCheck.createdBy?.name ||
+                        "Admin"}
                     </p>
                   </Col>
                   <Col md={6}>
@@ -479,12 +515,47 @@ const StaffInventoryCheck = () => {
                     </p>
                   </Col>
                 </Row>
-
-                <Alert variant="info">
-                  <FaInfoCircle className="me-2" />
-                  Vui lòng liên hệ quản trị viên để biết thêm chi tiết về đợt
-                  kiểm kê này.
-                </Alert>
+                <div className="table-responsive">
+                  <Table hover size="sm">
+                    <thead>
+                      <tr>
+                        <th>Sản phẩm</th>
+                        <th>SKU</th>
+                        <th>Số lượng hệ thống</th>
+                        <th>Số lượng thực tế</th>
+                        <th>Chênh lệch</th>
+                        <th>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedCheck.items?.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.product?.name}</td>
+                          <td>{item.product?.sku}</td>
+                          <td>{item.systemQuantity}</td>
+                          <td>{item.actualQuantity ?? "-"}</td>
+                          <td>
+                            {item.actualQuantity !== null &&
+                            item.actualQuantity !== undefined
+                              ? item.actualQuantity - item.systemQuantity
+                              : "-"}
+                          </td>
+                          <td>
+                            {item.status === "pending" ? (
+                              <Badge bg="warning">Chưa kiểm kê</Badge>
+                            ) : item.status === "checked" ? (
+                              <Badge bg="success">Đã kiểm kê</Badge>
+                            ) : item.status === "adjusted" ? (
+                              <Badge bg="info">Đã điều chỉnh</Badge>
+                            ) : (
+                              <Badge bg="secondary">{item.status}</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
               </>
             )}
           </Modal.Body>
