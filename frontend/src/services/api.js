@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Sử dụng backend chính
-const API_URL = 'http://localhost:5000/api';
-
+// const API_URL = 'http://localhost:5000/api';
+const API_URL='https://vercel.com/hoangs-projects-3f49bd83/quanlykhobe/ACj294umDjaThranrJzhztCMMHAA';
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
